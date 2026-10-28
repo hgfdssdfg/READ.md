@@ -4,7 +4,7 @@ Computational methods project.
 
 **Team Name:** [Insert Team Name]  
 **Contributors:**  
-- [Team Member 1 Full Name] ([GitHub Username]) - [Role/Focus Area]  
+- Leo Fajardo  
 - [Team Member 2 Full Name] ([GitHub Username]) - [Role/Focus Area]  
 - [Team Member 3 Full Name] ([GitHub Username]) - [Role/Focus Area]  
 
