@@ -1,0 +1,213 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import chi2_contingency
+
+# ==========================================
+# LOAD DATA
+# ==========================================
+
+def load_data(filename):
+    df = pd.read_csv(filename, sep=";")
+
+    # Convert yes/no to 1/0
+    df["subscribed"] = (df["y"] == "yes").astype(int)
+
+    return df
+
+# ==========================================
+# RQ2: AGE GROUP ANALYSIS
+# ==========================================
+
+def research_question_2(df):
+
+    print("\nRESEARCH QUESTION 2")
+
+    bins = [0, 25, 40, 55, 65, np.inf]
+
+    labels = [
+        "Under 25", "25-39", "40-54", "55-64", "65+"
+    ]
+
+    df["age_group"] = pd.cut(
+        df["age"],
+        bins=bins,
+        labels=labels,
+        right=False
+    )
+
+    results = df.groupby(
+        "age_group", observed=True
+    )["subscribed"].agg(["mean", "std", "count"])
+
+    results["conversion_rate"] = results["mean"] * 100
+
+    print("\nAge group results:")
+    print(results)
+
+    print("\nHighest conversion group:")
+    print(results["mean"].idxmax())
+
+    print("\nHighest standard deviation:")
+    print(results["std"].idxmax())
+
+    # Chi-square test comparing age groups
+    table = pd.crosstab(
+        df["age_group"], df["subscribed"]
+    )
+
+    chi2, p_value, dof, expected = chi2_contingency(table)
+
+    print("\nChi-square:", chi2)
+    print("P-value:", p_value)
+
+    if p_value < 0.05:
+        print("Reject the null hypothesis.")
+    else:
+        print("Fail to reject the null hypothesis.")
+
+    plt.bar(
+        results.index.astype(str),
+        results["conversion_rate"]
+    )
+
+    plt.xlabel("Age Group")
+    plt.ylabel("Conversion Rate (%)")
+    plt.title("Conversion Rate by Age Group")
+    plt.show()
+
+
+# ==========================================
+# RQ3: DEBT AND SUBSCRIPTION
+# ==========================================
+
+def research_question_3(df):
+
+    print("\nRESEARCH QUESTION 3")
+
+    # Create four debt categories
+    df["debt_group"] = (
+        df["housing"] + "_" + df["loan"]
+    )
+
+    results = df.groupby("debt_group")[
+        "subscribed"
+    ].agg(["mean", "count"])
+
+    results["conversion_rate"] = results["mean"] * 100
+
+    print("\nDebt group results:")
+    print(results)
+
+    # Chi-square test
+    table = pd.crosstab(
+        df["debt_group"],
+        df["subscribed"]
+    )
+
+    chi2, p_value, dof, expected = chi2_contingency(table)
+
+    print("\nChi-square:", chi2)
+    print("P-value:", p_value)
+
+    if p_value < 0.05:
+        print("Reject the null hypothesis.")
+        print("Debt status and subscription are associated.")
+    else:
+        print("Fail to reject the null hypothesis.")
+
+    # Calculate odds ratio relative to no debt
+    no_debt = df[
+        (df["housing"] == "no") &
+        (df["loan"] == "no")
+    ]
+
+    p0 = no_debt["subscribed"].mean()
+    odds0 = p0 / (1 - p0)
+
+    for group in results.index:
+
+        p = results.loc[group, "mean"]
+        odds = p / (1 - p)
+        odds_ratio = odds / odds0
+
+        print(group, "Odds Ratio:", odds_ratio)
+
+
+# ==========================================
+# RQ4: ACCOUNT BALANCE
+# ==========================================
+
+def research_question_4(df):
+
+    print("\nRESEARCH QUESTION 4")
+
+    # Divide account balances into quartiles
+    df["balance_group"] = pd.qcut(
+        df["balance"], 4, duplicates="drop"
+    )
+
+    results = df.groupby(
+        "balance_group", observed=True
+    )["subscribed"].agg(["mean", "count"])
+
+    results["conversion_rate"] = results["mean"] * 100
+
+    print("\nBalance quartile results:")
+    print(results)
+
+    # Compare balance statistics
+    subscribed = df[df["subscribed"] == 1]["balance"]
+    not_subscribed = df[df["subscribed"] == 0]["balance"]
+
+    print("\nMean balance of subscribed customers:")
+    print(subscribed.mean())
+
+    print("\nMean balance of non-subscribed customers:")
+    print(not_subscribed.mean())
+
+    print("\nStandard deviations:")
+    print("Subscribed:", subscribed.std())
+    print("Not subscribed:", not_subscribed.std())
+
+    # Empirical cumulative distributions
+    for values, label in [
+        (subscribed, "Subscribed"),
+        (not_subscribed, "Not Subscribed")
+    ]:
+        sorted_values = np.sort(values.values)
+
+        cumulative = np.arange(
+            1, len(sorted_values) + 1
+        ) / len(sorted_values)
+
+        plt.plot(
+            sorted_values, cumulative, label=label
+        )
+
+    plt.xlabel("Account Balance")
+    plt.ylabel("Cumulative Probability")
+    plt.title("Account Balance Distribution")
+    plt.legend()
+    plt.show()
+
+
+# ==========================================
+# MAIN FUNCTION
+# ==========================================
+
+def main():
+
+    df = load_data("bank-full.csv")
+
+    print("Total customers:", len(df))
+
+    print("Overall conversion rate:")
+    print(df["subscribed"].mean() * 100)
+
+    research_question_2(df)
+    research_question_3(df)
+    research_question_4(df)
+
+
+main()  
